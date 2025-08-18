@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GC Interactive Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    canvas {
+      background: white;
+      padding: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 30px;
+    }
+    .slider-container {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Interactive GC Viewer (gc_1.5.csv)</h2>
+
+  <input type="file" id="fileInput" accept=".csv"><br><br>
+
+  <div class="slider-container">
+    <label for="gcSlider">GC Pass: <span id="sliderValue">1</span></label><br>
+    <input type="range" id="gcSlider" min="1" max="1" value="1">
+  </div>
+
+  <canvas id="gcTimeChart" width="800" height="300"></canvas>
+  <canvas id="heapChart" width="800" height="300"></canvas>
+
+  <script>
+    let timeChart, heapChart;
+    let dataRows = [];
+
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const headers = lines[0].split(',');
+      return lines.slice(1).map(line => {
+        const values = line.split(',');
+        return headers.reduce((acc, header, i) => {
+          acc[header] = parseFloat(values[i]);
+          return acc;
+        }, {});
+      });
+    }
+
+    function updateCharts(index) {
+      const row = dataRows[index];
+      if (!row) return;
+
+      // Update GC Time chart
+      timeChart.data.labels = ["GC Time (ms)"];
+      timeChart.data.datasets[0].data = [row["GC Time (ms)"]];
+      timeChart.update();
+
+      // Update Heap chart
+      heapChart.data.labels = ["Used Heap (MB)", "Total Heap (MB)"];
+      heapChart.data.datasets[0].data = [
+        row["Use Size (bytes)"] / 1_000_000,
+        row["Total Size (bytes)"] / 1_000_000
+      ];
+      heapChart.update();
+    }
+
+    document.getElementById("fileInput").addEventListener("change", function (e) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        dataRows = parseCSV(reader.result);
+        const slider = document.getElementById("gcSlider");
+        slider.max = dataRows.length;
+        slider.value = 1;
+        updateCharts(0);
+      };
+      reader.readAsText(e.target.files[0]);
+    });
+
+    document.getElementById("gcSlider").addEventListener("input", function () {
+      const index = parseInt(this.value) - 1;
+      document.getElementById("sliderValue").innerText = this.value;
+      updateCharts(index);
+    });
+
+    window.onload = function () {
+      const timeCtx = document.getElementById("gcTimeChart").getContext("2d");
+      timeChart = new Chart(timeCtx, {
+        type: "bar",
+        data: {
+          labels: [],
+          datasets: [{
+            label: "GC Pause Duration (ms)",
+            data: [],
+            backgroundColor: "#36a2eb"
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "Milliseconds" }
+            }
+          }
+        }
+      });
+
+      const heapCtx = document.getElementById("heapChart").getContext("2d");
+      heapChart = new Chart(heapCtx, {
+        type: "bar",
+        data: {
+          labels: [],
+          datasets: [{
+            label: "Heap Memory Usage (MB)",
+            data: [],
+            backgroundColor: ["#ff6384", "#ffcd56"]
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "Megabytes" }
+            }
+          }
+        }
+      });
+    };
+  </script>
+
+</body>
+</html>
