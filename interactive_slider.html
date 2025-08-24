@@ -55,12 +55,10 @@
       const row = dataRows[index];
       if (!row) return;
 
-      // Update GC Time chart
       timeChart.data.labels = ["GC Time (ms)"];
       timeChart.data.datasets[0].data = [row["GC Time (ms)"]];
       timeChart.update();
 
-      // Update Heap chart
       heapChart.data.labels = ["Used Heap (MB)", "Total Heap (MB)"];
       heapChart.data.datasets[0].data = [
         row["Use Size (bytes)"] / 1_000_000,
